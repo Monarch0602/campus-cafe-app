@@ -2,8 +2,7 @@ import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
     SafeAreaView, ScrollView, Alert, ActivityIndicator
 } from 'react-native'
-import { useState, useEffect } from 'react'
-import auth from '@react-native-firebase/auth'
+import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { setCurrentUser } from '../lib/UserSession'
 
@@ -12,25 +11,7 @@ export default function LoginScreen({ navigation }) {
     const [otp, setOtp] = useState('')
     const [step, setStep] = useState(1)
     const [loading, setLoading] = useState(false)
-    const [loadingMessage, setLoadingMsg] = useState('')
     const [countdown, setCountdown] = useState(0)
-    const [confirmation, setConfirmation] = useState(null)
-
-    // Animate the loading message to feel responsive
-    useEffect(() => {
-        let timers = []
-        if (loading && step === 1) {
-            setLoadingMsg('Sending OTP...')
-            timers.push(setTimeout(() => setLoadingMsg('Verifying your number securely...'), 5000))
-            timers.push(setTimeout(() => setLoadingMsg('Almost there...'), 15000))
-        }
-        if (loading && step === 2) {
-            setLoadingMsg('Verifying OTP...')
-            timers.push(setTimeout(() => setLoadingMsg('Signing you in...'), 5000))
-            timers.push(setTimeout(() => setLoadingMsg('Loading your account...'), 12000))
-        }
-        return () => timers.forEach(clearTimeout)
-    }, [loading, step])
 
     function formatPhone(raw) {
         const digits = raw.replace(/\D/g, '')
@@ -47,8 +28,10 @@ export default function LoginScreen({ navigation }) {
         setLoading(true)
         try {
             const formattedPhone = formatPhone(phone)
-            const confirmationResult = await auth().signInWithPhoneNumber(formattedPhone)
-            setConfirmation(confirmationResult)
+            const { error } = await supabase.auth.signInWithOtp({
+                phone: formattedPhone,
+            })
+            if (error) throw error
             setStep(2)
             setCountdown(30)
             const timer = setInterval(() => {
@@ -69,18 +52,17 @@ export default function LoginScreen({ navigation }) {
             Alert.alert('Invalid OTP', 'Please enter the 6-digit code sent to your phone.')
             return
         }
-        if (!confirmation) {
-            Alert.alert('Error', 'Please request OTP first.')
-            setStep(1)
-            return
-        }
         setLoading(true)
         try {
             const formattedPhone = formatPhone(phone)
 
-            // PARALLEL: Run Firebase verification AND Supabase lookup at the same time
-            const [firebaseResult, profileResult] = await Promise.all([
-                confirmation.confirm(otp),
+            // Verify OTP and check profile in parallel
+            const [authResult, profileResult] = await Promise.all([
+                supabase.auth.verifyOtp({
+                    phone: formattedPhone,
+                    token: otp,
+                    type: 'sms',
+                }),
                 supabase
                     .from('profiles')
                     .select('*')
@@ -88,17 +70,17 @@ export default function LoginScreen({ navigation }) {
                     .maybeSingle()
             ])
 
+            if (authResult.error) throw authResult.error
+
             const existingProfile = profileResult.data
 
             if (existingProfile) {
-                // Existing user — load their profile and go to home
                 setCurrentUser({
                     id: existingProfile.id,
                     phone: existingProfile.phone,
                     name: existingProfile.full_name,
                     role: existingProfile.role,
                 })
-
                 const role = existingProfile.role === 'org_admin' ? 'org' : existingProfile.role || 'parent'
                 navigation.replace('Main', {
                     role,
@@ -107,7 +89,6 @@ export default function LoginScreen({ navigation }) {
                     profileData: { name: existingProfile.full_name, phone: existingProfile.phone },
                 })
             } else {
-                // New user — go to registration with phone pre-filled
                 navigation.replace('Register', {
                     phone: formattedPhone,
                 })
@@ -142,14 +123,7 @@ export default function LoginScreen({ navigation }) {
                         <Text style={s.hint}>We'll send a 6-digit OTP to verify your number</Text>
                         <TouchableOpacity style={[s.btn, (loading || phone.length < 10) && s.btnDisabled]}
                             onPress={sendOTP} disabled={loading || phone.length < 10}>
-                            {loading ? (
-                                <View style={s.loadingRow}>
-                                    <ActivityIndicator color="#fff" />
-                                    <Text style={s.loadingText}>{loadingMessage}</Text>
-                                </View>
-                            ) : (
-                                <Text style={s.btnText}>Send OTP</Text>
-                            )}
+                            {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Send OTP</Text>}
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
@@ -160,7 +134,7 @@ export default function LoginScreen({ navigation }) {
     return (
         <SafeAreaView style={s.safe}>
             <ScrollView contentContainerStyle={s.scroll}>
-                <TouchableOpacity onPress={() => setStep(1)} style={s.back} disabled={loading}>
+                <TouchableOpacity onPress={() => setStep(1)} style={s.back}>
                     <Text style={s.backText}>‹ Back</Text>
                 </TouchableOpacity>
                 <View style={s.logoBox}>
@@ -175,22 +149,15 @@ export default function LoginScreen({ navigation }) {
                         editable={!loading} />
                     <TouchableOpacity style={[s.btn, (loading || otp.length !== 6) && s.btnDisabled]}
                         onPress={verifyOTP} disabled={loading || otp.length !== 6}>
-                        {loading ? (
-                            <View style={s.loadingRow}>
-                                <ActivityIndicator color="#fff" />
-                                <Text style={s.loadingText}>{loadingMessage}</Text>
-                            </View>
-                        ) : (
-                            <Text style={s.btnText}>Verify & Sign In</Text>
-                        )}
+                        {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Verify & Sign In</Text>}
                     </TouchableOpacity>
                     <View style={s.resendRow}>
                         {countdown > 0
                             ? <Text style={s.resendTimer}>Resend OTP in {countdown}s</Text>
-                            : <TouchableOpacity onPress={sendOTP} disabled={loading}><Text style={s.resendBtn}>Resend OTP</Text></TouchableOpacity>
+                            : <TouchableOpacity onPress={sendOTP}><Text style={s.resendBtn}>Resend OTP</Text></TouchableOpacity>
                         }
                     </View>
-                    <TouchableOpacity style={s.changeNum} onPress={() => { setStep(1); setOtp(''); setConfirmation(null) }} disabled={loading}>
+                    <TouchableOpacity style={s.changeNum} onPress={() => { setStep(1); setOtp('') }}>
                         <Text style={s.changeNumText}>Change phone number</Text>
                     </TouchableOpacity>
                 </View>
@@ -219,8 +186,6 @@ const s = StyleSheet.create({
     btn: { backgroundColor: '#B85C38', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 4 },
     btnDisabled: { backgroundColor: '#D4A898' },
     btnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-    loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    loadingText: { color: '#fff', fontSize: 13, fontWeight: '500' },
     resendRow: { alignItems: 'center', marginTop: 16 },
     resendTimer: { fontSize: 13, color: '#9C9C98' },
     resendBtn: { fontSize: 13, color: '#B85C38', fontWeight: '600' },
