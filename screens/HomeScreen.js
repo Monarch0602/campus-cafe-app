@@ -7,16 +7,7 @@ import { useCart } from '../context/CartContext'
 const CATEGORIES = ['All', 'Breakfast', 'Lunch', 'Snacks', 'Beverage']
 const CAT_EMOJI = { All: '🍽️', Breakfast: '🥐', Lunch: '🍱', Snacks: '🍟', Beverage: '☕' }
 
-const FALLBACK_MENU = [
-    { id: '1', name: 'Dal Makhani Thali', description: 'Dal · Rice · Roti · Pickle', category: 'thali', price: 150, is_veg: true, is_spicy: false, is_special: true },
-    { id: '2', name: 'Paneer Butter Masala Thali', description: 'Paneer · Naan · Dal Soup · Dessert', category: 'thali', price: 170, is_veg: true, is_spicy: false, is_special: false },
-    { id: '3', name: 'Veg Pulao Box', description: 'Pulao · Raita · Papad', category: 'rice', price: 120, is_veg: true, is_spicy: false, is_special: false },
-    { id: '4', name: 'Rajma Chawal', description: 'Rajma · Rice · Salad', category: 'rice', price: 125, is_veg: true, is_spicy: true, is_special: false },
-    { id: '5', name: 'South Indian Meal', description: 'Sambar · Rasam · Idli · Chutney', category: 'thali', price: 130, is_veg: true, is_spicy: false, is_special: false },
-    { id: '6', name: 'Chole Bhature Box', description: '2 Bhature · Chole · Onion', category: 'roti', price: 140, is_veg: true, is_spicy: true, is_special: false },
-    { id: '7', name: 'Pav Bhaji Meal', description: '2 Pav · Bhaji · Butter', category: 'snacks', price: 110, is_veg: true, is_spicy: false, is_special: false },
-    { id: '8', name: 'Gulab Jamun (2 pcs)', description: 'Soft gulab jamun in sugar syrup', category: 'dessert', price: 40, is_veg: true, is_spicy: false, is_special: false },
-]
+const FALLBACK_MENU = []
 
 function getTomorrow() {
     const d = new Date(); d.setDate(d.getDate() + 1)

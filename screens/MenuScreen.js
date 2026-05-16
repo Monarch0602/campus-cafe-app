@@ -4,18 +4,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
 
-const FALLBACK_MENU = [
-    { id: '1', name: 'Dal Makhani Thali', description: 'Dal · Rice · Roti · Pickle · Papad', category: 'thali', price: 150, is_veg: true, is_spicy: false, is_special: true },
-    { id: '2', name: 'Paneer Butter Masala Thali', description: 'Paneer · Naan · Dal Soup · Gulab Jamun', category: 'thali', price: 170, is_veg: true, is_spicy: false, is_special: false },
-    { id: '3', name: 'Veg Pulao Box', description: 'Jeera Pulao · Raita · Papad', category: 'rice', price: 120, is_veg: true, is_spicy: false, is_special: false },
-    { id: '4', name: 'Rajma Chawal', description: 'Rajma · Steamed Rice · Onion Salad', category: 'rice', price: 125, is_veg: true, is_spicy: true, is_special: false },
-    { id: '5', name: 'South Indian Meal', description: 'Sambar Rice · Rasam · Idli · Chutney', category: 'thali', price: 130, is_veg: true, is_spicy: false, is_special: false },
-    { id: '6', name: 'Chole Bhature Box', description: '2 Bhature · Chole · Onion', category: 'roti', price: 140, is_veg: true, is_spicy: true, is_special: false },
-    { id: '7', name: 'Pav Bhaji Meal', description: '2 Pav · Bhaji · Butter · Lemon', category: 'snacks', price: 110, is_veg: true, is_spicy: false, is_special: false },
-    { id: '8', name: 'Egg Curry Tiffin', description: '2 Eggs · Curry · Rice · Roti', category: 'thali', price: 145, is_veg: false, is_spicy: true, is_special: false },
-    { id: '9', name: 'Masala Chai', description: 'Freshly brewed spiced tea', category: 'beverage', price: 25, is_veg: true, is_spicy: false, is_special: false },
-    { id: '10', name: 'Gulab Jamun (2 pcs)', description: 'Soft gulab jamun in sugar syrup', category: 'dessert', price: 40, is_veg: true, is_spicy: false, is_special: false },
-]
+const FALLBACK_MENU = []
 
 function getTomorrow() {
     const d = new Date(); d.setDate(d.getDate() + 1)
