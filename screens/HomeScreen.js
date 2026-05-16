@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, Image } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, Image, BackHandler } from 'react-native'
 import { useState, useEffect, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../lib/supabase'
@@ -30,6 +30,14 @@ export default function HomeScreen({ navigation, route }) {
     const [loading, setLoading] = useState(false)
     const showSubscribe = role === 'parent' || role === 'org'
     const [tab, setTab] = useState('pre_order')
+
+    useEffect(() => {
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+            BackHandler.exitApp()
+            return true
+        })
+        return () => backHandler.remove()
+    }, [])
 
 
     useFocusEffect(

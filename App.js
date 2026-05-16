@@ -1,6 +1,5 @@
 import 'react-native-gesture-handler'
 import { useEffect } from 'react'
-import { BackHandler } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -74,13 +73,6 @@ export default function App() {
       }
     }
     loadSession()
-    useEffect(() => {
-      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-        BackHandler.exitApp()
-        return true
-      })
-      return () => backHandler.remove()
-    }, [])
   }, [])
 
   return (
