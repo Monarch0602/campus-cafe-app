@@ -2,7 +2,7 @@ import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
     SafeAreaView, ScrollView, Alert, ActivityIndicator
 } from 'react-native'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import auth from '@react-native-firebase/auth'
 import { supabase } from '../lib/supabase'
 import { setCurrentUser } from '../lib/UserSession'
@@ -10,10 +10,27 @@ import { setCurrentUser } from '../lib/UserSession'
 export default function LoginScreen({ navigation }) {
     const [phone, setPhone] = useState('')
     const [otp, setOtp] = useState('')
-    const [step, setStep] = useState(1) // 1=phone, 2=otp
+    const [step, setStep] = useState(1)
     const [loading, setLoading] = useState(false)
+    const [loadingMessage, setLoadingMsg] = useState('')
     const [countdown, setCountdown] = useState(0)
     const [confirmation, setConfirmation] = useState(null)
+
+    // Animate the loading message to feel responsive
+    useEffect(() => {
+        let timers = []
+        if (loading && step === 1) {
+            setLoadingMsg('Sending OTP...')
+            timers.push(setTimeout(() => setLoadingMsg('Verifying your number securely...'), 5000))
+            timers.push(setTimeout(() => setLoadingMsg('Almost there...'), 15000))
+        }
+        if (loading && step === 2) {
+            setLoadingMsg('Verifying OTP...')
+            timers.push(setTimeout(() => setLoadingMsg('Signing you in...'), 5000))
+            timers.push(setTimeout(() => setLoadingMsg('Loading your account...'), 12000))
+        }
+        return () => timers.forEach(clearTimeout)
+    }, [loading, step])
 
     function formatPhone(raw) {
         const digits = raw.replace(/\D/g, '')
@@ -59,17 +76,19 @@ export default function LoginScreen({ navigation }) {
         }
         setLoading(true)
         try {
-            // Verify OTP with Firebase
-            const result = await confirmation.confirm(otp)
-            const firebaseUser = result.user
             const formattedPhone = formatPhone(phone)
 
-            // Check if profile already exists in Supabase
-            const { data: existingProfile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('phone', phone.trim())
-                .maybeSingle()
+            // PARALLEL: Run Firebase verification AND Supabase lookup at the same time
+            const [firebaseResult, profileResult] = await Promise.all([
+                confirmation.confirm(otp),
+                supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('phone', phone.trim())
+                    .maybeSingle()
+            ])
+
+            const existingProfile = profileResult.data
 
             if (existingProfile) {
                 // Existing user — load their profile and go to home
@@ -117,12 +136,20 @@ export default function LoginScreen({ navigation }) {
                         <View style={s.phoneRow}>
                             <View style={s.countryCode}><Text style={s.countryCodeText}>🇮🇳 +91</Text></View>
                             <TextInput style={s.phoneInput} placeholder="10-digit number" placeholderTextColor="#9C9C98"
-                                value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={10} autoFocus />
+                                value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={10} autoFocus
+                                editable={!loading} />
                         </View>
                         <Text style={s.hint}>We'll send a 6-digit OTP to verify your number</Text>
                         <TouchableOpacity style={[s.btn, (loading || phone.length < 10) && s.btnDisabled]}
                             onPress={sendOTP} disabled={loading || phone.length < 10}>
-                            {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Send OTP</Text>}
+                            {loading ? (
+                                <View style={s.loadingRow}>
+                                    <ActivityIndicator color="#fff" />
+                                    <Text style={s.loadingText}>{loadingMessage}</Text>
+                                </View>
+                            ) : (
+                                <Text style={s.btnText}>Send OTP</Text>
+                            )}
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
@@ -133,7 +160,7 @@ export default function LoginScreen({ navigation }) {
     return (
         <SafeAreaView style={s.safe}>
             <ScrollView contentContainerStyle={s.scroll}>
-                <TouchableOpacity onPress={() => setStep(1)} style={s.back}>
+                <TouchableOpacity onPress={() => setStep(1)} style={s.back} disabled={loading}>
                     <Text style={s.backText}>‹ Back</Text>
                 </TouchableOpacity>
                 <View style={s.logoBox}>
@@ -144,18 +171,26 @@ export default function LoginScreen({ navigation }) {
                 <View style={s.card}>
                     <Text style={s.fieldLabel}>Enter OTP</Text>
                     <TextInput style={[s.phoneInput, s.otpInput]} placeholder="• • • • • •" placeholderTextColor="#9C9C98"
-                        value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} autoFocus />
+                        value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} autoFocus
+                        editable={!loading} />
                     <TouchableOpacity style={[s.btn, (loading || otp.length !== 6) && s.btnDisabled]}
                         onPress={verifyOTP} disabled={loading || otp.length !== 6}>
-                        {loading ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Verify & Sign In</Text>}
+                        {loading ? (
+                            <View style={s.loadingRow}>
+                                <ActivityIndicator color="#fff" />
+                                <Text style={s.loadingText}>{loadingMessage}</Text>
+                            </View>
+                        ) : (
+                            <Text style={s.btnText}>Verify & Sign In</Text>
+                        )}
                     </TouchableOpacity>
                     <View style={s.resendRow}>
                         {countdown > 0
                             ? <Text style={s.resendTimer}>Resend OTP in {countdown}s</Text>
-                            : <TouchableOpacity onPress={sendOTP}><Text style={s.resendBtn}>Resend OTP</Text></TouchableOpacity>
+                            : <TouchableOpacity onPress={sendOTP} disabled={loading}><Text style={s.resendBtn}>Resend OTP</Text></TouchableOpacity>
                         }
                     </View>
-                    <TouchableOpacity style={s.changeNum} onPress={() => { setStep(1); setOtp(''); setConfirmation(null) }}>
+                    <TouchableOpacity style={s.changeNum} onPress={() => { setStep(1); setOtp(''); setConfirmation(null) }} disabled={loading}>
                         <Text style={s.changeNumText}>Change phone number</Text>
                     </TouchableOpacity>
                 </View>
@@ -184,6 +219,8 @@ const s = StyleSheet.create({
     btn: { backgroundColor: '#B85C38', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 4 },
     btnDisabled: { backgroundColor: '#D4A898' },
     btnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+    loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    loadingText: { color: '#fff', fontSize: 13, fontWeight: '500' },
     resendRow: { alignItems: 'center', marginTop: 16 },
     resendTimer: { fontSize: 13, color: '#9C9C98' },
     resendBtn: { fontSize: 13, color: '#B85C38', fontWeight: '600' },
