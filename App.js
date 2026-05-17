@@ -1,10 +1,11 @@
 import 'react-native-gesture-handler'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { StatusBar } from 'expo-status-bar'
-import { Text } from 'react-native'
+import { Text, View, ActivityIndicator } from 'react-native'
+import auth from '@react-native-firebase/auth'
 import { CartProvider } from './context/CartContext'
 import { supabase } from './lib/supabase'
 import { setCurrentUser } from './lib/UserSession'
@@ -47,17 +48,22 @@ function TabNavigator({ route }) {
 }
 
 export default function App() {
+  const [initialRoute, setInitialRoute] = useState(null)
+  const [initialParams, setInitialParams] = useState({})
+
   useEffect(() => {
-    // Try to restore user session on app start
-    async function loadSession() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
+    // Listen to Firebase auth state — runs on app start AND when user signs in/out
+    const unsubscribe = auth().onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser?.phoneNumber) {
+        try {
+          // User is signed in with Firebase — look up profile
+          const phone = firebaseUser.phoneNumber.replace('+91', '')
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
-            .single()
+            .eq('phone', phone)
+            .maybeSingle()
+
           if (profile) {
             setCurrentUser({
               id: profile.id,
@@ -65,24 +71,48 @@ export default function App() {
               name: profile.full_name,
               role: profile.role,
             })
+            const role = profile.role === 'org_admin' ? 'org' : profile.role || 'parent'
+            setInitialParams({
+              role,
+              userId: profile.id,
+              phone: profile.phone,
+              profileData: { name: profile.full_name, phone: profile.phone },
+            })
+            setInitialRoute('Main')
+          } else {
+            // Signed in but no profile yet — go to register
+            setInitialRoute('Splash')
           }
+        } catch (err) {
+          console.log('Session restore error:', err)
+          setInitialRoute('Splash')
         }
-      } catch (err) {
-        console.log('Session load error:', err)
+      } else {
+        // No Firebase session — go to splash
+        setInitialRoute('Splash')
       }
-    }
-    loadSession()
+    })
+    return () => unsubscribe()
   }, [])
+
+  // Show loading while checking auth state
+  if (initialRoute === null) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#B85C38' }}>
+        <ActivityIndicator size="large" color="#fff" />
+      </View>
+    )
+  }
 
   return (
     <CartProvider>
       <NavigationContainer>
         <StatusBar style="auto" />
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
+        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRoute}>
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="Main" component={TabNavigator} />
+          <Stack.Screen name="Main" component={TabNavigator} initialParams={initialParams} />
           <Stack.Screen name="Cart" component={CartScreen} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="Success" component={SuccessScreen} />
