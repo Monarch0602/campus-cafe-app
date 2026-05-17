@@ -3,6 +3,7 @@ import {
     SafeAreaView, ScrollView, Alert, ActivityIndicator
 } from 'react-native'
 import { useState } from 'react'
+import auth from '@react-native-firebase/auth'
 import { supabase } from '../lib/supabase'
 import { setCurrentUser } from '../lib/UserSession'
 
@@ -12,6 +13,7 @@ export default function LoginScreen({ navigation }) {
     const [step, setStep] = useState(1)
     const [loading, setLoading] = useState(false)
     const [countdown, setCountdown] = useState(0)
+    const [confirmation, setConfirmation] = useState(null)
 
     function formatPhone(raw) {
         const digits = raw.replace(/\D/g, '')
@@ -27,43 +29,47 @@ export default function LoginScreen({ navigation }) {
         }
         setLoading(true)
         try {
-            const { error } = await supabase.auth.signInWithOtp({ phone: formatPhone(phone) })
-            if (error) throw error
+            const formattedPhone = formatPhone(phone)
+            const confirmationResult = await auth().signInWithPhoneNumber(formattedPhone)
+            setConfirmation(confirmationResult)
             setStep(2)
             setCountdown(30)
             const timer = setInterval(() => {
-                setCountdown(prev => { if (prev <= 1) { clearInterval(timer); return 0 } return prev - 1 })
+                setCountdown(prev => {
+                    if (prev <= 1) { clearInterval(timer); return 0 }
+                    return prev - 1
+                })
             }, 1000)
         } catch (err) {
-            Alert.alert('Error', err.message || 'Failed to send OTP.')
+            console.log('Send OTP error:', err)
+            Alert.alert('Error', err.message || 'Failed to send OTP. Please try again.')
         }
         setLoading(false)
     }
 
     async function verifyOTP() {
         if (otp.length !== 6) {
-            Alert.alert('Invalid OTP', 'Please enter the 6-digit code.')
+            Alert.alert('Invalid OTP', 'Please enter the 6-digit code sent to your phone.')
+            return
+        }
+        if (!confirmation) {
+            Alert.alert('Error', 'Please request OTP first.')
+            setStep(1)
             return
         }
         setLoading(true)
         try {
             const formattedPhone = formatPhone(phone)
 
-            // Run auth verification and profile lookup in parallel
-            const [authResult, profileResult] = await Promise.all([
-                supabase.auth.verifyOtp({
-                    phone: formattedPhone,
-                    token: otp,
-                    type: 'sms',
-                }),
+            // Run Firebase verification AND Supabase profile lookup in parallel
+            const [firebaseResult, profileResult] = await Promise.all([
+                confirmation.confirm(otp),
                 supabase
                     .from('profiles')
                     .select('*')
                     .eq('phone', phone.trim())
                     .maybeSingle()
             ])
-
-            if (authResult.error) throw authResult.error
 
             const existingProfile = profileResult.data
 
@@ -85,7 +91,8 @@ export default function LoginScreen({ navigation }) {
                 navigation.replace('Register', { phone: formattedPhone })
             }
         } catch (err) {
-            Alert.alert('Invalid OTP', err.message || 'The code is incorrect.')
+            console.log('Verify OTP error:', err)
+            Alert.alert('Invalid OTP', err.message || 'The code you entered is incorrect.')
         }
         setLoading(false)
     }
@@ -124,7 +131,7 @@ export default function LoginScreen({ navigation }) {
     return (
         <SafeAreaView style={s.safe}>
             <ScrollView contentContainerStyle={s.scroll}>
-                <TouchableOpacity onPress={() => setStep(1)} style={s.back}>
+                <TouchableOpacity onPress={() => setStep(1)} style={s.back} disabled={loading}>
                     <Text style={s.backText}>‹ Back</Text>
                 </TouchableOpacity>
                 <View style={s.logoBox}>
@@ -144,10 +151,10 @@ export default function LoginScreen({ navigation }) {
                     <View style={s.resendRow}>
                         {countdown > 0
                             ? <Text style={s.resendTimer}>Resend OTP in {countdown}s</Text>
-                            : <TouchableOpacity onPress={sendOTP}><Text style={s.resendBtn}>Resend OTP</Text></TouchableOpacity>
+                            : <TouchableOpacity onPress={sendOTP} disabled={loading}><Text style={s.resendBtn}>Resend OTP</Text></TouchableOpacity>
                         }
                     </View>
-                    <TouchableOpacity style={s.changeNum} onPress={() => { setStep(1); setOtp('') }}>
+                    <TouchableOpacity style={s.changeNum} onPress={() => { setStep(1); setOtp(''); setConfirmation(null) }} disabled={loading}>
                         <Text style={s.changeNumText}>Change phone number</Text>
                     </TouchableOpacity>
                 </View>

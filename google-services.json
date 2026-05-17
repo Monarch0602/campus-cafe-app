@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "632170432797",
+    "project_id": "campus-cafe-5b7b3",
+    "storage_bucket": "campus-cafe-5b7b3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:632170432797:android:56ebd20ed52120e0b1f9f4",
+        "android_client_info": {
+          "package_name": "com.campuscafe.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjDQ6VBgSejW9ynj-HOuvs4I-ETz9eYPE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
