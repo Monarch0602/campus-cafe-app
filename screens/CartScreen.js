@@ -100,8 +100,8 @@ export default function CartScreen({ navigation, route }) {
 
             navigation.navigate('Payment', { total, role, userId, orderId: order.id })
         } catch (err) {
-            console.log('Order error:', err.message)
-            Alert.alert('Order Failed', 'Could not place your order. Please try again.')
+            console.log('Order error:', err)
+            Alert.alert('Order Failed', err.message || 'Could not place your order. Please try again.')
         } finally {
             setPlacing(false)
         }

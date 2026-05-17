@@ -31,13 +31,16 @@ export default function HomeScreen({ navigation, route }) {
     const showSubscribe = role === 'parent' || role === 'org'
     const [tab, setTab] = useState('pre_order')
 
-    useEffect(() => {
-        const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-            BackHandler.exitApp()
-            return true
-        })
-        return () => backHandler.remove()
-    }, [])
+    // Handle hardware back button — exit app only from Home screen
+    useFocusEffect(
+        useCallback(() => {
+            const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+                BackHandler.exitApp()
+                return true
+            })
+            return () => backHandler.remove()
+        }, [])
+    )
 
 
     useFocusEffect(
