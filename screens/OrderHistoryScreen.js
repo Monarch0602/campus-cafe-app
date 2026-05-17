@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, Image } from 'react-native'
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, Image, RefreshControl } from 'react-native'
 import { useState, useEffect, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../lib/supabase'
@@ -23,6 +23,7 @@ export default function OrderHistoryScreen({ navigation, route }) {
     const [userId, setUserId] = useState(null)
     const [orders, setOrders] = useState([])
     const [loading, setLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
 
     const roleLabel = { parent: 'Parent', teacher: 'Teacher' }[role] || 'User'
 
@@ -54,6 +55,11 @@ export default function OrderHistoryScreen({ navigation, route }) {
             if (data) setOrders(data)
         } catch (e) { }
         setLoading(false)
+    }
+    async function onRefresh() {
+        setRefreshing(true)
+        await fetchOrders()
+        setRefreshing(false)
     }
 
     const totalSpent = orders.reduce((s, o) => s + Number(o.total_amount), 0)
@@ -168,6 +174,14 @@ export default function OrderHistoryScreen({ navigation, route }) {
                             </View>
                         )
                     }}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor="#B85C38"
+                            colors={['#B85C38']}
+                        />
+                    }
                 />
             )}
         </SafeAreaView>

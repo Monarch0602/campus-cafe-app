@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, Image } from 'react-native'
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, Image, RefreshControl } from 'react-native'
 import { useState, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../lib/supabase'
@@ -16,6 +16,7 @@ export default function MenuScreen({ navigation, route }) {
     const { cart, addToCart, removeFromCart, cartCount } = useCart()
 
     const [items, setItems] = useState(FALLBACK_MENU)
+    const [refreshing, setRefreshing] = useState(false)
     const [search, setSearch] = useState('')
 
     // Re-fetch every time screen is focused
@@ -41,6 +42,12 @@ export default function MenuScreen({ navigation, route }) {
                 setItems([])
             }
         } catch (e) { }
+    }
+
+    async function onRefresh() {
+        setRefreshing(true)
+        await fetchMenu()
+        setRefreshing(false)
     }
 
     function getQty(id) { return cart.find(i => i.id === id)?.qty || 0 }
@@ -118,6 +125,14 @@ export default function MenuScreen({ navigation, route }) {
                             </View>
                         </View>
                     )}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor="#B85C38"
+                            colors={['#B85C38']}
+                        />
+                    }
                 />
             )}
 
