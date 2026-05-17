@@ -32,17 +32,19 @@ export default function HomeScreen({ navigation, route }) {
     const showSubscribe = role === 'parent' || role === 'org'
     const [tab, setTab] = useState('pre_order')
 
-    // Handle hardware back button — exit app only from Home screen
+    // Handle hardware back button — exit app from Home, otherwise allow normal back
     useFocusEffect(
         useCallback(() => {
-            const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+            const onBackPress = () => {
                 BackHandler.exitApp()
-                return true
-            })
-            return () => backHandler.remove()
+                return true  // tells Android "we handled it, don't do default"
+            }
+
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress)
+
+            return () => subscription.remove()
         }, [])
     )
-
 
     useFocusEffect(
         useCallback(() => { fetchTomorrowMenu() }, [])
