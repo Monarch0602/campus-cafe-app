@@ -68,7 +68,6 @@ export default function CartScreen({ navigation, route }) {
                     status: 'pending',
                     delivery_date: getTomorrow(),
                     collection_slot: slot,
-                    delivery_address: 'Campus Cafe Counter',
                     subtotal: total,
                     gst_amount: 0,
                     total_amount: total,

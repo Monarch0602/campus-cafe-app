@@ -21,7 +21,6 @@ import ProfileScreen from './screens/ProfileScreen'
 import SuccessScreen from './screens/SuccessScreen'
 import OrderHistoryScreen from './screens/OrderHistoryScreen'
 import NotificationsScreen from './screens/NotificationsScreen'
-import AddressScreen from './screens/AddressScreen'
 
 const Stack = createNativeStackNavigator()
 const Tab = createBottomTabNavigator()
@@ -89,7 +88,6 @@ export default function App() {
           <Stack.Screen name="Success" component={SuccessScreen} />
           <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="Address" component={AddressScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </CartProvider>
