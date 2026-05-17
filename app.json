@@ -26,21 +26,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "extraMavenRepos": [
-              "../../node_modules/@notifee/react-native/android/libs"
-            ]
-          },
-          "ios": {
-            "useFrameworks": "static"
-          }
-        }
-      ]
-    ],
     "extra": {
       "eas": {
         "projectId": "fc72d5dd-e1c9-4b88-a18a-176672ccc5b3"

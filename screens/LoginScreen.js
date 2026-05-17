@@ -27,36 +27,29 @@ export default function LoginScreen({ navigation }) {
         }
         setLoading(true)
         try {
-            const formattedPhone = formatPhone(phone)
-            const { error } = await supabase.auth.signInWithOtp({
-                phone: formattedPhone,
-            })
+            const { error } = await supabase.auth.signInWithOtp({ phone: formatPhone(phone) })
             if (error) throw error
             setStep(2)
             setCountdown(30)
             const timer = setInterval(() => {
-                setCountdown(prev => {
-                    if (prev <= 1) { clearInterval(timer); return 0 }
-                    return prev - 1
-                })
+                setCountdown(prev => { if (prev <= 1) { clearInterval(timer); return 0 } return prev - 1 })
             }, 1000)
         } catch (err) {
-            console.log('Send OTP error:', err)
-            Alert.alert('Error', err.message || 'Failed to send OTP. Please try again.')
+            Alert.alert('Error', err.message || 'Failed to send OTP.')
         }
         setLoading(false)
     }
 
     async function verifyOTP() {
         if (otp.length !== 6) {
-            Alert.alert('Invalid OTP', 'Please enter the 6-digit code sent to your phone.')
+            Alert.alert('Invalid OTP', 'Please enter the 6-digit code.')
             return
         }
         setLoading(true)
         try {
             const formattedPhone = formatPhone(phone)
 
-            // Verify OTP and check profile in parallel
+            // Run auth verification and profile lookup in parallel
             const [authResult, profileResult] = await Promise.all([
                 supabase.auth.verifyOtp({
                     phone: formattedPhone,
@@ -89,13 +82,10 @@ export default function LoginScreen({ navigation }) {
                     profileData: { name: existingProfile.full_name, phone: existingProfile.phone },
                 })
             } else {
-                navigation.replace('Register', {
-                    phone: formattedPhone,
-                })
+                navigation.replace('Register', { phone: formattedPhone })
             }
         } catch (err) {
-            console.log('Verify OTP error:', err)
-            Alert.alert('Invalid OTP', err.message || 'The code you entered is incorrect.')
+            Alert.alert('Invalid OTP', err.message || 'The code is incorrect.')
         }
         setLoading(false)
     }
