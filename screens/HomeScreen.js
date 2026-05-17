@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, Image, BackHandler } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, Image, BackHandler, RefreshControl } from 'react-native'
 import { useState, useEffect, useCallback } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import { supabase } from '../lib/supabase'
@@ -28,6 +28,7 @@ export default function HomeScreen({ navigation, route }) {
     const [menuItems, setMenuItems] = useState(FALLBACK_MENU)
     const [category, setCategory] = useState('All')
     const [loading, setLoading] = useState(false)
+    const [refreshing, setRefreshing] = useState(false)
     const showSubscribe = role === 'parent' || role === 'org'
     const [tab, setTab] = useState('pre_order')
 
@@ -62,6 +63,12 @@ export default function HomeScreen({ navigation, route }) {
         setLoading(false)
     }
 
+    async function onRefresh() {
+        setRefreshing(true)
+        await fetchTomorrowMenu()
+        setRefreshing(false)
+    }
+
     const filtered = category === 'All' ? menuItems : menuItems.filter(i => i.category === category.toLowerCase())
     const special = menuItems.find(i => i.is_special)
     const roleLabel = { org: 'Organization', parent: 'Parent', teacher: 'Teacher' }[role]
@@ -69,7 +76,17 @@ export default function HomeScreen({ navigation, route }) {
 
     return (
         <SafeAreaView style={s.safe}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor="#B85C38"
+                        colors={['#B85C38']}
+                    />
+                }
+            >
                 <View style={s.header}>
                     <View>
                         <Text style={s.greeting}>Good morning 👋</Text>
